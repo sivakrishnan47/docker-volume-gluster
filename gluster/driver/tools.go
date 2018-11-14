@@ -54,3 +54,12 @@ func GetMountName(d *basic.Driver, r *volume.CreateRequest) (string, error) {
 	}
 	return url.PathEscape(r.Name), nil
 }
+
+func getVolAndServerNames(volURI string) (string, []string) {
+	volURI, _ = idna.ToASCII(volURI)
+	re := regexp.MustCompile(validVolURIRegex)
+	res := re.FindAllStringSubmatch(volURI, -1)
+	volServers := strings.Split(res[0][1], ",")
+	volumeID := res[0][10]
+	return volumeID, volServers
+}

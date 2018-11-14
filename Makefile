@@ -6,9 +6,9 @@ APP_USERREPO=github.com/sapk
 APP_PACKAGE=$(APP_USERREPO)/$(APP_NAME)
 
 
-PLUGIN_USER ?= sapk
+PLUGIN_USER ?= hub.docker.intel.com/rrp
 PLUGIN_NAME ?= plugin-gluster
-PLUGIN_TAG ?= latest
+PLUGIN_TAG ?= rest
 PLUGIN_IMAGE ?= $(PLUGIN_USER)/$(PLUGIN_NAME):$(PLUGIN_TAG)
 
 GIT_HASH=$(shell git rev-parse --short HEAD)
@@ -44,7 +44,7 @@ docker-plugin: docker-rootfs docker-plugin-create
 
 docker-image:
 	@echo -e "$(OK_COLOR)==> Docker build image : ${PLUGIN_IMAGE} $(NO_COLOR)"
-	docker build -t ${PLUGIN_IMAGE} -f support/docker/Dockerfile .
+	docker build --build-arg http_proxy=http://proxy-chain.intel.com:911 --build-arg https_proxy=http://proxy-chain.intel.com:912 -t ${PLUGIN_IMAGE} -f support/docker/Dockerfile .
 
 docker-rootfs: docker-image
 	@echo -e "$(OK_COLOR)==> create rootfs directory in ./plugin/rootfs$(NO_COLOR)"

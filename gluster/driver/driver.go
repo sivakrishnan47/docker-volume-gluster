@@ -3,6 +3,7 @@ package driver
 import (
 	"fmt"
 
+	"github.com/sapk/docker-volume-gluster/rest"
 	"github.com/sapk/docker-volume-helpers/basic"
 	"github.com/sapk/docker-volume-helpers/driver"
 
@@ -17,6 +18,8 @@ var (
 	CfgVersion = 2
 	//CfgFolder config folder
 	CfgFolder = "/etc/docker-volumes/gluster/"
+
+	gfsBase = "/mnt/"
 )
 
 //GlusterDriver docker volume plugin driver extension of basic plugin
@@ -44,8 +47,38 @@ func mountVolume(d *basic.Driver, v driver.Volume, m driver.Mount, r *volume.Mou
 	cmd := fmt.Sprintf("glusterfs %s %s", parseVolURI(v.GetOptions()["voluri"]), m.GetPath())
 	//cmd := fmt.Sprintf("/usr/bin/mount -t glusterfs %s %s", v.VolumeURI, m.Path)
 	//TODO fuseOpts   /usr/bin/mount -t glusterfs v.VolumeURI -o fuseOpts v.Mountpoint
+
+	volName, glusterServers := getVolAndServerNames(v.GetOptions()["voluri"])
+	if err := createGlusterVol(v.GetOptions()["rest"], volName, glusterServers); err != nil {
+		return nil, err
+	}
+
 	if err := d.RunCmd(cmd); err != nil {
 		return nil, err
 	}
 	return &volume.MountResponse{Mountpoint: m.GetPath()}, nil
+}
+
+func createGlusterVol(restURL string, volName string, glusterServers []string) error {
+	logrus.Debugf("gluster REST API %s", restURL)
+	client := rest.NewClient(restURL, gfsBase)
+
+	logrus.Debugf("Checking if gluster volume %s exists", volName)
+
+	exist, err := client.VolumeExist(volName)
+	if err != nil {
+		logrus.Warn("Unable to check if gluster volume exists, %v", err)
+		return err
+	}
+	if !exist {
+		logrus.Debugf("Creating gluster volume %s ...", volName)
+		if err := client.CreateVolume(volName, glusterServers); err != nil {
+			logrus.Errorf("Unable to create gluster volume, %s", err.Error())
+			return err
+		}
+		logrus.Debugf("Gluster volume %s successfully created", volName)
+
+	}
+
+	return nil
 }
